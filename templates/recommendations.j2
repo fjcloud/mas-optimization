@@ -1,11 +1,28 @@
-{% import 'macros.j2' as m %}
-{% set header = '%-42s %-18s %-20s %-20s %-20s %-20s %s' | format('VPA', 'CONTAINER', 'CURRENT', 'TARGET', 'LOWER', 'UPPER', 'ACTION') %}
-{{ header }}
-{{ '-' * 160 }}
-{% for row in recs.rows %}
-{{ '%-42s %-18s %-20s %-20s %-20s %-20s %s' | format(row.id, row.container, row.current, row.target, row.lower, row.upper, row.action) }}
+{%- set raise_rows = recs.rows | selectattr('action', 'in', ['raise-cpu', 'raise-mem']) | list -%}
+{%- set ok_rows = recs.rows | rejectattr('action', 'in', ['raise-cpu', 'raise-mem']) | list -%}
+{%- set fmt = '%-22s %-22s %-18s %-18s %s' -%}
+{%- set hdr = fmt | format('CONTAINER', 'NAMESPACE', 'CURRENT', 'RECOMMENDED', 'PATCH') -%}
+{%- set rule = '-' * 100 -%}
+{%- if raise_rows | length > 0 %}
+Raise requests — a CR patch is written for these
+{{ hdr }}
+{{ rule }}
+{% for row in raise_rows %}
+{{ fmt | format(row.container, row.namespace, row.current, row.target, 'raise CPU' if row.action == 'raise-cpu' else 'raise memory') }}
 {% endfor %}
+{% else %}
+No request raises.
+{% endif %}
+{%- if ok_rows | length > 0 %}
 
-target = new request (P90 x 1.15). RAISE = current is below lowerBound.
-Patch IBM CRs only (never Deployments). Manage serverBundles is shared: max of bundle targets.
-Do not copy UPPER onto limits.
+Already OK — no patch
+{{ hdr }}
+{{ rule }}
+{% for row in ok_rows %}
+{{ fmt | format(row.container, row.namespace, row.current, row.target, 'no') }}
+{% endfor %}
+{% endif %}
+{%- if recs.manage.needed | bool %}
+
+Manage serverBundles is one shared request for every bundle. Patch: {{ recs.manage.cpu }} / {{ recs.manage.memory }}
+{% endif %}

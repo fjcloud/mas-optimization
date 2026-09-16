@@ -6,5 +6,5 @@ Patches written under output/ (nothing was applied).
   oc patch suite {{ instance_id }} -n {{ core_namespace }} --type json --patch-file output/suite-podtemplates.yaml
 {% endif %}
 {% if not (recs.manage.needed | bool) and (recs.suite | length == 0) %}
-  Nothing to patch — everything is in band.
+  Nothing to patch.
 {% endif %}

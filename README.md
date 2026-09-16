@@ -34,5 +34,3 @@ apply them.
 |------|------|-----------------|
 | `output/manageworkspace-serverbundles.yaml` | merge | `ManageWorkspace` `spec.settings.resources.serverBundles.requests` only (max of bundle targets) |
 | `output/suite-podtemplates.yaml` | json | individual `Suite.spec.podTemplates[i].containers[j].resources.requests` keys |
-
-Leave **in-band** workloads alone. Do not copy `UPPER` onto limits.
