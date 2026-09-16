@@ -1,6 +1,6 @@
 ---
 # Print Off-mode VPA recommendations vs live requests.
-# Requires a working `oc` login in this shell (KUBECONFIG / oc whoami).
+# Uses kubernetes.core against the current kubeconfig (same as `oc` in this shell).
 - name: Print MAS VPA recommendations
   hosts: localhost
   connection: local
@@ -9,56 +9,31 @@
     vpa_selector: app.kubernetes.io/part-of=mas-vpa-off
 
   tasks:
-    - name: Confirm oc login
-      ansible.builtin.command: oc whoami
-      register: oc_user
-      changed_when: false
-
-    - name: Show kube user
-      ansible.builtin.debug:
-        msg: "oc user {{ oc_user.stdout }}"
-
-    - name: Get recommendation-only VPAs
-      ansible.builtin.command:
-        argv:
-          - oc
-          - get
-          - vpa
-          - -A
-          - -l
+    - name: List Off-mode VPAs
+      kubernetes.core.k8s_info:
+        api_version: autoscaling.k8s.io/v1
+        kind: VerticalPodAutoscaler
+        label_selectors:
           - "{{ vpa_selector }}"
-          - -o
-          - json
-      register: vpa_raw
-      changed_when: false
-
-    - name: Parse VPAs
-      ansible.builtin.set_fact:
-        vpa_items: "{{ (vpa_raw.stdout | from_json).get('items', []) }}"
+      register: vpas
 
     - name: Fail if nothing is deployed
       ansible.builtin.fail:
         msg: >-
           No VPAs with label {{ vpa_selector }}.
           Apply them with: oc apply -k deploy
-      when: vpa_items | length == 0
+      when: vpas.resources | length == 0
 
     - name: Get target workloads
-      ansible.builtin.command:
-        argv:
-          - oc
-          - get
-          - "{{ item.spec.targetRef.kind }}"
-          - "{{ item.spec.targetRef.name }}"
-          - -n
-          - "{{ item.metadata.namespace }}"
-          - -o
-          - json
-      loop: "{{ vpa_items }}"
+      kubernetes.core.k8s_info:
+        api_version: "{{ item.spec.targetRef.apiVersion | default('apps/v1') }}"
+        kind: "{{ item.spec.targetRef.kind }}"
+        name: "{{ item.spec.targetRef.name }}"
+        namespace: "{{ item.metadata.namespace }}"
+      loop: "{{ vpas.resources }}"
       loop_control:
         label: "{{ item.metadata.namespace }}/{{ item.spec.targetRef.kind }}/{{ item.spec.targetRef.name }}"
-      register: workload_raw
-      changed_when: false
+      register: workloads
       failed_when: false
 
     - name: Print recommendations

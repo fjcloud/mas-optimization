@@ -44,9 +44,9 @@
 {% set header = '%-42s %-18s %-20s %-20s %-20s %-20s %s' | format('VPA', 'CONTAINER', 'CURRENT', 'TARGET', 'LOWER', 'UPPER', 'ACTION') %}
 {{ header }}
 {{ '-' * 160 }}
-{% for vpa in vpa_items %}
-{% set wl_stdout = workload_raw.results[loop.index0].stdout | default('') %}
-{% set wl = (wl_stdout | from_json) if (wl_stdout | length > 0 and workload_raw.results[loop.index0].rc | default(1) == 0) else {} %}
+{% for vpa in vpas.resources %}
+{% set wl_list = workloads.results[loop.index0].resources | default([]) %}
+{% set wl = wl_list[0] if wl_list | length > 0 else {} %}
 {% set recs = (vpa.status.recommendation.containerRecommendations | default([])) if vpa.status is defined else [] %}
 {% set vpa_id = vpa.metadata.namespace ~ '/' ~ vpa.metadata.name %}
 {% set mode = vpa.spec.updatePolicy.updateMode | default('?') %}

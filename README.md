@@ -5,11 +5,11 @@ Autoscaler. VPA only **recommends**. You copy `target` onto IBM custom
 resources. Pods are never auto-resized.
 
 ```
-oc apply -k deploy          # operator + controller + Off-mode VPAs
+oc apply -k deploy
 ansible-playbook print-recommendations.yml
 ```
 
-`ansible-playbook` uses the `oc` login of the current shell.
+The playbook uses [kubernetes.core](https://docs.ansible.com/ansible/latest/collections/kubernetes/core/k8s_info_module.html) (`k8s_info`) with the current kubeconfig — the same login as `oc` in this shell. Install the collection once if needed: `ansible-galaxy collection install kubernetes.core`.
 
 ## What gets applied
 
