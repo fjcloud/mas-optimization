@@ -1,3 +1,4 @@
+ansible>=8.0.0
 kubernetes>=24.2.0
 jsonpatch
 requests-oauthlib

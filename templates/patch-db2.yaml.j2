@@ -1,0 +1,10 @@
+# Merge patch for Db2uCluster. Nested keys only — the rest of the CR is unchanged.
+# oc patch db2ucluster {{ db2_cluster }} -n {{ db2_namespace }} --type merge --patch-file output/db2ucluster-podconfig.yaml
+spec:
+  podConfig:
+    db2u:
+      resource:
+        db2u:
+          requests:
+            cpu: "{{ recs.db2.cpu }}"
+            memory: {{ recs.db2.memory }}

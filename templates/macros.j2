@@ -1,0 +1,67 @@
+{% macro cpu_cores(v) -%}
+{%- if not v or v == 'None' -%}0
+{%- elif v is string and v.endswith('m') -%}{{ (v[:-1] | float) / 1000 }}
+{%- else -%}{{ v | float }}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro mem_bytes(v) -%}
+{%- if not v or v == 'None' -%}0
+{%- elif v is string and v.endswith('Gi') -%}{{ (v[:-2] | float) * 1073741824 }}
+{%- elif v is string and v.endswith('Mi') -%}{{ (v[:-2] | float) * 1048576 }}
+{%- elif v is string and v.endswith('Ki') -%}{{ (v[:-2] | float) * 1024 }}
+{%- elif v is string and v.endswith('G') -%}{{ (v[:-1] | float) * 1000000000 }}
+{%- elif v is string and v.endswith('M') -%}{{ (v[:-1] | float) * 1000000 }}
+{%- else -%}{{ v | int }}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro fmt_cpu(v) -%}
+{%- set mill = ((cpu_cores(v) | float) * 1000 / 25) | round(0, 'ceil') * 25 -%}
+{%- set mill = mill | int -%}
+{%- if mill < 25 %}{% set mill = 25 %}{% endif -%}
+{%- if mill % 1000 == 0 -%}{{ mill // 1000 }}
+{%- else -%}{{ mill }}m
+{%- endif -%}
+{%- endmacro %}
+
+{% macro fmt_mem(v) -%}
+{%- set b = mem_bytes(v) | float -%}
+{%- if b <= 0 -%}0
+{%- elif b >= 1073741824 -%}
+{%- set gi = (b / 1073741824) -%}
+{%- if gi == (gi | round(0, 'floor')) -%}{{ gi | int }}Gi
+{%- else -%}{{ '%g' | format((gi * 4) | round(0, 'ceil') / 4) }}Gi
+{%- endif -%}
+{%- else -%}{{ (b / 1048576) | round(0, 'ceil') | int }}Mi
+{%- endif -%}
+{%- endmacro %}
+
+{% macro live_requests(wl_json, container) -%}
+{%- set ns = namespace(cpu='', mem='') -%}
+{%- if wl_json and wl_json.get('spec') -%}
+{%- for c in wl_json.spec.template.spec.containers | default([]) -%}
+{%- if c.name == container -%}
+{%- set ns.cpu = (c.resources.requests.cpu | default('')) -%}
+{%- set ns.mem = (c.resources.requests.memory | default('')) -%}
+{%- endif -%}
+{%- endfor -%}
+{%- endif -%}
+{{ ns.cpu }}/{{ ns.mem }}
+{%- endmacro %}
+
+{% macro action(cur_cpu, cur_mem, l_cpu, l_mem, u_cpu, u_mem, t_cpu, t_mem, never_shrink_mem) -%}
+{%- set cpu_now = cpu_cores(cur_cpu) | float -%}
+{%- set cpu_lo = cpu_cores(l_cpu) | float -%}
+{%- set cpu_up = cpu_cores(u_cpu) | float -%}
+{%- set mem_now = mem_bytes(cur_mem) | float -%}
+{%- set mem_lo = mem_bytes(l_mem) | float -%}
+{%- set mem_up = mem_bytes(u_mem) | float -%}
+{%- if not cur_cpu -%}n/a
+{%- elif cpu_lo > 0 and cpu_now < cpu_lo -%}raise-cpu
+{%- elif mem_lo > 0 and mem_now < mem_lo -%}raise-mem
+{%- elif (not never_shrink_mem) and mem_up > 0 and mem_now > mem_up -%}lower-mem
+{%- elif cpu_up > 0 and cpu_now > cpu_up -%}lower-cpu
+{%- else -%}in-band
+{%- endif -%}
+{%- endmacro %}

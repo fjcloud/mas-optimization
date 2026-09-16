@@ -1,0 +1,15 @@
+# JSON patch (RFC 6902) for Suite.spec.podTemplates[*].containers[*].resources.requests
+# Replaces only the listed cpu/memory keys. The rest of the Suite CR is unchanged.
+# oc patch suite {{ instance_id }} -n {{ core_namespace }} --type json --patch-file output/suite-podtemplates.yaml
+{% for op in recs.suite %}
+{% if op.cpu %}
+- op: replace
+  path: /spec/podTemplates/{{ op.tidx }}/containers/{{ op.cidx }}/resources/requests/cpu
+  value: "{{ op.cpu }}"
+{% endif %}
+{% if op.memory %}
+- op: replace
+  path: /spec/podTemplates/{{ op.tidx }}/containers/{{ op.cidx }}/resources/requests/memory
+  value: "{{ op.memory }}"
+{% endif %}
+{% endfor %}

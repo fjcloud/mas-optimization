@@ -1,0 +1,9 @@
+# Merge patch for ManageWorkspace. Nested keys only — the rest of the CR is unchanged.
+# oc patch manageworkspace {{ instance_id }}-{{ workspace_id }} -n {{ manage_namespace }} --type merge --patch-file output/manageworkspace-serverbundles.yaml
+spec:
+  settings:
+    resources:
+      serverBundles:
+        requests:
+          cpu: "{{ recs.manage.cpu }}"
+          memory: {{ recs.manage.memory }}

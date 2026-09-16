@@ -1,0 +1,77 @@
+{% import 'macros.j2' as m %}
+{% set suite = (suite_cr.resources | default([{}]))[0] | default({}) %}
+{% set manage_ws = (manage_cr.resources | default([{}]))[0] | default({}) %}
+{% set db2_ws = (db2_cr.resources | default([{}]))[0] | default({}) %}
+{% set mw_req = (((manage_ws.spec | default({})).settings | default({})).resources | default({})).serverBundles.requests | default({}) %}
+{% set db2_req = (((((db2_ws.spec | default({})).podConfig | default({})).db2u | default({})).resource | default({})).db2u | default({})).requests | default({}) %}
+{% set ns = namespace(manage_cpu=0, manage_mem=0, manage_raise=false, db2_cpu=0, db2_mem=0, db2_raise_cpu=false, db2_raise_mem=false, rows=[], suite_ops=[]) %}
+{% for vpa in vpas.resources %}
+{% set wl_list = workloads.results[loop.index0].resources | default([]) %}
+{% set wl = wl_list[0] if wl_list | length > 0 else {} %}
+{% set recs = (vpa.status.recommendation.containerRecommendations | default([])) if vpa.status is defined else [] %}
+{% set never_shrink = (vpa.metadata.namespace == db2_namespace) %}
+{% for rec in recs %}
+{% set ctr = rec.containerName | default('') %}
+{% set current = m.live_requests(wl, ctr) %}
+{% set cur_cpu = current.split('/')[0] %}
+{% set cur_mem = current.split('/')[1] if '/' in current else '' %}
+{% set t_cpu = rec.target.cpu | default('') %}
+{% set t_mem = rec.target.memory | default('') %}
+{% set act = m.action(cur_cpu, cur_mem, rec.lowerBound.cpu | default(''), rec.lowerBound.memory | default(''), rec.upperBound.cpu | default(''), rec.upperBound.memory | default(''), t_cpu, t_mem, never_shrink) %}
+{% set _ = ns.rows.append({
+  'id': vpa.metadata.namespace ~ '/' ~ vpa.metadata.name,
+  'container': ctr,
+  'namespace': vpa.metadata.namespace,
+  'current': (cur_cpu ~ '/' ~ cur_mem) if cur_cpu else '-',
+  'target': (t_cpu ~ '/' ~ m.fmt_mem(t_mem)),
+  'lower': ((rec.lowerBound.cpu | default('')) ~ '/' ~ m.fmt_mem(rec.lowerBound.memory | default(''))),
+  'upper': ((rec.upperBound.cpu | default('')) ~ '/' ~ m.fmt_mem(rec.upperBound.memory | default(''))),
+  'action': act,
+  'target_cpu': t_cpu,
+  'target_mem': t_mem
+}) %}
+{% if vpa.metadata.namespace == manage_namespace %}
+{% if (m.cpu_cores(t_cpu) | float) > ns.manage_cpu %}{% set ns.manage_cpu = m.cpu_cores(t_cpu) | float %}{% endif %}
+{% if (m.mem_bytes(t_mem) | float) > ns.manage_mem %}{% set ns.manage_mem = m.mem_bytes(t_mem) | float %}{% endif %}
+{% if act.startswith('raise') %}{% set ns.manage_raise = true %}{% endif %}
+{% elif vpa.metadata.namespace == db2_namespace %}
+{% set ns.db2_cpu = m.cpu_cores(t_cpu) | float %}
+{% set ns.db2_mem = m.mem_bytes(t_mem) | float %}
+{% if act == 'raise-cpu' %}{% set ns.db2_raise_cpu = true %}{% endif %}
+{% if act == 'raise-mem' %}{% set ns.db2_raise_mem = true %}{% endif %}
+{% elif vpa.metadata.namespace == core_namespace and act.startswith('raise') %}
+{% set tmpl_name = (vpa.spec.targetRef.name | default('')) | regex_replace('^' ~ instance_id ~ '-', '') %}
+{% set found = namespace(tidx=-1, cidx=-1) %}
+{% for t in (suite.spec.podTemplates | default([])) %}
+{% if t.name == tmpl_name %}
+{% set found.tidx = loop.index0 %}
+{% for c in (t.containers | default([])) %}
+{% if c.name == ctr or c.name == tmpl_name %}{% set found.cidx = loop.index0 %}{% endif %}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% if found.tidx >= 0 and found.cidx >= 0 %}
+{% set op = {'name': tmpl_name, 'tidx': found.tidx, 'cidx': found.cidx, 'cpu': none, 'memory': none} %}
+{% if act == 'raise-cpu' %}{% set _ = op.update({'cpu': m.fmt_cpu(t_cpu)}) %}{% endif %}
+{% if act == 'raise-mem' %}{% set _ = op.update({'memory': m.fmt_mem(t_mem)}) %}{% endif %}
+{% set _ = ns.suite_ops.append(op) %}
+{% endif %}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% set cur_m_cpu = m.cpu_cores(mw_req.cpu | default('')) | float %}
+{% set cur_m_mem = m.mem_bytes(mw_req.memory | default('')) | float %}
+{% set patch_m_cpu = [cur_m_cpu, ns.manage_cpu] | max %}
+{% set patch_m_mem = [cur_m_mem, ns.manage_mem] | max %}
+{% set cur_d_cpu = m.cpu_cores(db2_req.cpu | default('')) | float %}
+{% set cur_d_mem = m.mem_bytes(db2_req.memory | default('')) | float %}
+manage:
+  needed: {{ ns.manage_raise | bool }}
+  cpu: "{{ m.fmt_cpu(patch_m_cpu) }}"
+  memory: "{{ m.fmt_mem(patch_m_mem) }}"
+db2:
+  needed: {{ (ns.db2_raise_cpu or ns.db2_raise_mem) | bool }}
+  cpu: "{{ m.fmt_cpu(ns.db2_cpu if ns.db2_raise_cpu else cur_d_cpu) }}"
+  memory: "{{ m.fmt_mem([cur_d_mem, ns.db2_mem] | max) }}"
+suite: {{ ns.suite_ops | to_json }}
+rows: {{ ns.rows | to_json }}

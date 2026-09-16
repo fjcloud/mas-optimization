@@ -1,112 +1,11 @@
-{% macro cpu_cores(v) -%}
-{%- if not v or v == 'None' -%}0
-{%- elif v is string and v.endswith('m') -%}{{ (v[:-1] | float) / 1000 }}
-{%- else -%}{{ v | float }}
-{%- endif -%}
-{%- endmacro %}
-
-{% macro mem_bytes(v) -%}
-{%- if not v or v == 'None' -%}0
-{%- elif v is string and v.endswith('Gi') -%}{{ (v[:-2] | float) * 1073741824 }}
-{%- elif v is string and v.endswith('Mi') -%}{{ (v[:-2] | float) * 1048576 }}
-{%- elif v is string and v.endswith('Ki') -%}{{ (v[:-2] | float) * 1024 }}
-{%- elif v is string and v.endswith('G') -%}{{ (v[:-1] | float) * 1000000000 }}
-{%- elif v is string and v.endswith('M') -%}{{ (v[:-1] | float) * 1000000 }}
-{%- else -%}{{ v | int }}
-{%- endif -%}
-{%- endmacro %}
-
-{% macro fmt_mem(v) -%}
-{%- set b = mem_bytes(v) | float -%}
-{%- if b <= 0 -%}-
-{%- elif b >= 1073741824 -%}
-{%- set gi = (b / 1073741824) -%}
-{%- if gi == (gi | round(0, 'floor')) -%}{{ gi | int }}Gi
-{%- else -%}{{ '%g' | format((gi * 4) | round(0, 'ceil') / 4) }}Gi
-{%- endif -%}
-{%- else -%}{{ (b / 1048576) | round(0, 'ceil') | int }}Mi
-{%- endif -%}
-{%- endmacro %}
-
-{% macro live_requests(wl_json, container) -%}
-{%- set ns = namespace(cpu='', mem='') -%}
-{%- if wl_json and wl_json.get('spec') -%}
-{%- for c in wl_json.spec.template.spec.containers | default([]) -%}
-{%- if c.name == container -%}
-{%- set ns.cpu = (c.resources.requests.cpu | default('')) -%}
-{%- set ns.mem = (c.resources.requests.memory | default('')) -%}
-{%- endif -%}
-{%- endfor -%}
-{%- endif -%}
-{{ ns.cpu }}/{{ ns.mem }}
-{%- endmacro %}
-
+{% import 'macros.j2' as m %}
 {% set header = '%-42s %-18s %-20s %-20s %-20s %-20s %s' | format('VPA', 'CONTAINER', 'CURRENT', 'TARGET', 'LOWER', 'UPPER', 'ACTION') %}
 {{ header }}
 {{ '-' * 160 }}
-{% for vpa in vpas.resources %}
-{% set wl_list = workloads.results[loop.index0].resources | default([]) %}
-{% set wl = wl_list[0] if wl_list | length > 0 else {} %}
-{% set recs = (vpa.status.recommendation.containerRecommendations | default([])) if vpa.status is defined else [] %}
-{% set vpa_id = vpa.metadata.namespace ~ '/' ~ vpa.metadata.name %}
-{% set mode = vpa.spec.updatePolicy.updateMode | default('?') %}
-{% if mode != 'Off' %}
-{{ '%-42s %s' | format(vpa_id, 'WARNING updateMode=' ~ mode ~ ' (must stay Off)') }}
-{% endif %}
-{% if recs | length == 0 %}
-{{ '%-42s %-18s %s' | format(vpa_id, '-', 'no recommendation yet') }}
-{% else %}
-{% for rec in recs %}
-{% set ctr = rec.containerName | default('') %}
-{% set current = live_requests(wl, ctr) %}
-{% set cur_cpu = current.split('/')[0] %}
-{% set cur_mem = current.split('/')[1] if '/' in current else '' %}
-{% set t_cpu = rec.target.cpu | default('') %}
-{% set t_mem = rec.target.memory | default('') %}
-{% set l_cpu = rec.lowerBound.cpu | default('') %}
-{% set l_mem = rec.lowerBound.memory | default('') %}
-{% set u_cpu = rec.upperBound.cpu | default('') %}
-{% set u_mem = rec.upperBound.memory | default('') %}
-{% set never_shrink_mem = (vpa.metadata.namespace == 'db2u') %}
-{% set cpu_now = cpu_cores(cur_cpu) | float %}
-{% set cpu_lo = cpu_cores(l_cpu) | float %}
-{% set cpu_up = cpu_cores(u_cpu) | float %}
-{% set mem_now = mem_bytes(cur_mem) | float %}
-{% set mem_lo = mem_bytes(l_mem) | float %}
-{% set mem_up = mem_bytes(u_mem) | float %}
-{% set act = namespace(value='in band') %}
-{% if not cur_cpu %}
-{% set act.value = 'n/a' %}
-{% elif cpu_lo > 0 and cpu_now < cpu_lo %}
-{% set act.value = 'RAISE CPU → ' ~ t_cpu %}
-{% elif mem_lo > 0 and mem_now < mem_lo %}
-{% set act.value = 'RAISE MEM → ' ~ fmt_mem(t_mem) %}
-{% elif (not never_shrink_mem) and mem_up > 0 and mem_now > mem_up %}
-{% set act.value = 'consider LOWER MEM' %}
-{% elif cpu_up > 0 and cpu_now > cpu_up %}
-{% set act.value = 'consider LOWER CPU' %}
-{% endif %}
-{{ '%-42s %-18s %-20s %-20s %-20s %-20s %s' | format(
-  vpa_id,
-  ctr,
-  (cur_cpu ~ '/' ~ cur_mem) if cur_cpu else '-',
-  (t_cpu ~ '/' ~ fmt_mem(t_mem)),
-  (l_cpu ~ '/' ~ fmt_mem(l_mem)),
-  (u_cpu ~ '/' ~ fmt_mem(u_mem)),
-  act.value
-) }}
-{% endfor %}
-{% endif %}
+{% for row in recs.rows %}
+{{ '%-42s %-18s %-20s %-20s %-20s %-20s %s' | format(row.id, row.container, row.current, row.target, row.lower, row.upper, row.action) }}
 {% endfor %}
 
-How to read this
-  target      apply as the new request (P90 usage x 1.15, floors 25m / 250Mi)
-  lower/upper current request is in band between these
-  ACTION      RAISE when current is below lowerBound
-
-Apply by patching IBM CRs, never Deployments
-  Manage  oc patch manageworkspace mas1-ws1 -n mas-mas1-manage --type merge -p '{"spec":{"settings":{"resources":{"serverBundles":{"requests":{"cpu":"<max bundle target cpu>","memory":"<max bundle target mem>"}}}}}}'
-  Db2     oc patch db2ucluster mas-mas1-ws1-manage -n db2u --type merge -p '{"spec":{"podConfig":{"db2u":{"resource":{"db2u":{"requests":{"cpu":"<target>","memory":"<target>"}}}}}}}'
-  Core    patch Suite.spec.podTemplates by name (merge replaces the whole list — keep every existing entry)
-
-Do not shrink Db2 memory below live usage. Manage serverBundles requests are shared: use the max of ui/cron/mea/report/foundation targets.
+target = new request (P90 x 1.15). RAISE = current is below lowerBound.
+Patch IBM CRs only (never Deployments). Manage serverBundles is shared: max of bundle targets.
+Do not shrink Db2 memory. Do not copy UPPER onto limits.
