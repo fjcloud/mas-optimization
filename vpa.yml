@@ -1,18 +1,12 @@
 ---
-# Install Red Hat VPA (recommendation-only), create Off VPAs on MAS workloads,
-# print recommendations, and write CR patches under output/. Does not apply patches.
-- name: MAS VPA
+# Install Red Hat VPA (recommendation-only) and create Off VPAs on MAS workloads.
+# ROSA HCP: operator and recommender stay on workers. VPA does not resize pods.
+- name: Deploy MAS VPA
   hosts: localhost
   connection: local
   gather_facts: false
   vars:
     deploy_dir: "{{ playbook_dir }}/deploy"
-    instance_id: mas1
-    workspace_id: ws1
-    core_namespace: mas-{{ instance_id }}-core
-    manage_namespace: mas-{{ instance_id }}-manage
-    vpa_selector: app.kubernetes.io/part-of=mas-vpa-off
-    output_dir: "{{ playbook_dir }}/output"
 
   tasks:
     - name: Apply operator namespace, OperatorGroup, and Subscription
@@ -79,76 +73,3 @@
       loop_control:
         loop_var: target
         label: "{{ target.namespace }}/{{ target.vpa_name }} -> {{ target.deploy }}"
-
-    - name: List Off-mode VPAs
-      kubernetes.core.k8s_info:
-        api_version: autoscaling.k8s.io/v1
-        kind: VerticalPodAutoscaler
-        label_selectors:
-          - "{{ vpa_selector }}"
-      register: vpas
-
-    - name: Fail if no Off VPAs
-      ansible.builtin.fail:
-        msg: No VPAs with label {{ vpa_selector }}.
-      when: vpas.resources | length == 0
-
-    - name: Get target workloads
-      kubernetes.core.k8s_info:
-        api_version: "{{ item.spec.targetRef.apiVersion | default('apps/v1') }}"
-        kind: "{{ item.spec.targetRef.kind }}"
-        name: "{{ item.spec.targetRef.name }}"
-        namespace: "{{ item.metadata.namespace }}"
-      loop: "{{ vpas.resources }}"
-      loop_control:
-        label: "{{ item.metadata.namespace }}/{{ item.spec.targetRef.kind }}/{{ item.spec.targetRef.name }}"
-      register: workloads
-      failed_when: false
-
-    - name: Get Suite
-      kubernetes.core.k8s_info:
-        api_version: core.mas.ibm.com/v1
-        kind: Suite
-        name: "{{ instance_id }}"
-        namespace: "{{ core_namespace }}"
-      register: suite_cr
-
-    - name: Get ManageWorkspace
-      kubernetes.core.k8s_info:
-        api_version: apps.mas.ibm.com/v1
-        kind: ManageWorkspace
-        name: "{{ instance_id }}-{{ workspace_id }}"
-        namespace: "{{ manage_namespace }}"
-      register: manage_cr
-
-    - name: Build recommendation data
-      ansible.builtin.set_fact:
-        recs: "{{ lookup('template', 'recs.yaml.j2') | from_yaml }}"
-
-    - name: Print recommendations
-      ansible.builtin.debug:
-        msg: "{{ lookup('template', 'recommendations.j2').splitlines() }}"
-
-    - name: Reset output directory
-      ansible.builtin.file:
-        path: "{{ output_dir }}"
-        state: "{{ item }}"
-      loop:
-        - absent
-        - directory
-
-    - name: Write ManageWorkspace merge patch
-      ansible.builtin.template:
-        src: patch-manage.yaml.j2
-        dest: "{{ output_dir }}/manageworkspace-serverbundles.yaml"
-      when: recs.manage.needed | bool
-
-    - name: Write Suite JSON patch
-      ansible.builtin.template:
-        src: patch-suite.yaml.j2
-        dest: "{{ output_dir }}/suite-podtemplates.yaml"
-      when: recs.suite | length > 0
-
-    - name: Print apply commands
-      ansible.builtin.debug:
-        msg: "{{ lookup('template', 'apply-commands.j2').splitlines() }}"
