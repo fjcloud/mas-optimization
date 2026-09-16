@@ -6,13 +6,13 @@
   connection: local
   gather_facts: false
   vars:
-    deploy_dir: "{{ playbook_dir }}/deploy"
+    vpa_dir: "{{ playbook_dir }}/vpa"
 
   tasks:
     - name: Apply operator namespace, OperatorGroup, and Subscription
       kubernetes.core.k8s:
         state: present
-        src: "{{ deploy_dir }}/operator.yaml"
+        src: "{{ vpa_dir }}/operator.yaml"
 
     - name: Wait for VerticalPodAutoscalerController CRD
       kubernetes.core.k8s_info:
@@ -37,7 +37,7 @@
     - name: Apply recommendation-only controller on workers
       kubernetes.core.k8s:
         state: present
-        src: "{{ deploy_dir }}/controller.yaml"
+        src: "{{ vpa_dir }}/controller.yaml"
 
     - name: List MAS deployments
       kubernetes.core.k8s_info:
