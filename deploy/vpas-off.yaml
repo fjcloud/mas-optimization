@@ -277,24 +277,3 @@ spec:
         controlledValues: RequestsOnly
       - containerName: "*"
         mode: "Off"
----
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: mas-db2u
-  namespace: db2u
-  labels:
-    app.kubernetes.io/part-of: mas-vpa-off
-spec:
-  targetRef:
-    apiVersion: apps/v1
-    kind: StatefulSet
-    name: c-mas-mas1-ws1-manage-db2u
-  updatePolicy:
-    updateMode: "Off"
-  resourcePolicy:
-    containerPolicies:
-      - containerName: db2u
-        controlledValues: RequestsOnly
-      - containerName: "*"
-        mode: "Off"

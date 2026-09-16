@@ -2,12 +2,9 @@ Patches written under output/ (nothing was applied).
 {% if recs.manage.needed | bool %}
   oc patch manageworkspace {{ instance_id }}-{{ workspace_id }} -n {{ manage_namespace }} --type merge --patch-file output/manageworkspace-serverbundles.yaml
 {% endif %}
-{% if recs.db2.needed | bool %}
-  oc patch db2ucluster {{ db2_cluster }} -n {{ db2_namespace }} --type merge --patch-file output/db2ucluster-podconfig.yaml
-{% endif %}
 {% if recs.suite | length > 0 %}
   oc patch suite {{ instance_id }} -n {{ core_namespace }} --type json --patch-file output/suite-podtemplates.yaml
 {% endif %}
-{% if not (recs.manage.needed | bool) and not (recs.db2.needed | bool) and (recs.suite | length == 0) %}
+{% if not (recs.manage.needed | bool) and (recs.suite | length == 0) %}
   Nothing to patch — everything is in band.
 {% endif %}
