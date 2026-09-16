@@ -26,7 +26,7 @@ apply them.
 |------|------|
 | `operator.yaml` | Red Hat VPA Operator, scheduled on **workers** (ROSA HCP has no masters) |
 | `controller.yaml` | Recommender only (`recommendationOnly: true`) |
-| `vpas-off.yaml` | One Off VPA per MAS Core / Manage workload (`mas1` / `ws1`). Db2 is out of scope. |
+| `vpas-off.yaml` | One Off VPA per MAS Core / Manage workload (`mas1` / `ws1`) |
 
 ## Patches
 
@@ -35,4 +35,4 @@ apply them.
 | `output/manageworkspace-serverbundles.yaml` | merge | `ManageWorkspace` `spec.settings.resources.serverBundles.requests` only (max of bundle targets) |
 | `output/suite-podtemplates.yaml` | json | individual `Suite.spec.podTemplates[i].containers[j].resources.requests` keys |
 
-Leave **in-band** workloads alone. Do not copy `UPPER` onto limits. Db2 is not recommended or patched.
+Leave **in-band** workloads alone. Do not copy `UPPER` onto limits.
