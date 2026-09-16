@@ -5,12 +5,13 @@ copy those numbers onto IBM Maximo CRs yourself. VPA never resizes pods
 (`updateMode: Off`).
 
 ```bash
+pip install -r requirements.txt
+ansible-galaxy collection install kubernetes.core
 oc apply -k deploy
 ansible-playbook print-recommendations.yml
 ```
 
-The playbook uses `kubernetes.core.k8s_info` and the kubeconfig from this
-shell (`ansible-galaxy collection install kubernetes.core` if needed).
+The playbook uses `kubernetes.core.k8s_info` and the kubeconfig from this shell.
 
 On a brand-new cluster the CRDs are not there yet. If apply fails with
 `no matches for kind VerticalPodAutoscaler`, wait a minute and run
