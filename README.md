@@ -5,9 +5,7 @@ VPA does not resize pods. You apply the CR patches yourself.
 
 ```bash
 pip install -r requirements.txt
-ansible-playbook install-vpa.yml
-ansible-playbook ensure-vpas.yml
-ansible-playbook print-recommendations.yml
+ansible-playbook vpa.yml
 ```
 
 ## Optional: 24h benchmark

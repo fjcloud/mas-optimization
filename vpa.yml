@@ -1,11 +1,12 @@
 ---
-# Print Off-mode VPA recommendations and write CR patch files under output/.
-# Does not apply patches. Uses kubernetes.core and the current kubeconfig.
-- name: Print MAS VPA recommendations
+# Install Red Hat VPA (recommendation-only), create Off VPAs on MAS workloads,
+# print recommendations, and write CR patches under output/. Does not apply patches.
+- name: MAS VPA
   hosts: localhost
   connection: local
   gather_facts: false
   vars:
+    deploy_dir: "{{ playbook_dir }}/deploy"
     instance_id: mas1
     workspace_id: ws1
     core_namespace: mas-{{ instance_id }}-core
@@ -14,6 +15,71 @@
     output_dir: "{{ playbook_dir }}/output"
 
   tasks:
+    - name: Apply operator namespace, OperatorGroup, and Subscription
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ deploy_dir }}/operator.yaml"
+
+    - name: Wait for VerticalPodAutoscalerController CRD
+      kubernetes.core.k8s_info:
+        api_version: apiextensions.k8s.io/v1
+        kind: CustomResourceDefinition
+        name: verticalpodautoscalercontrollers.autoscaling.openshift.io
+      register: vpac_crd
+      until: vpac_crd.resources | default([]) | length > 0
+      retries: 36
+      delay: 10
+
+    - name: Wait for VerticalPodAutoscaler CRD
+      kubernetes.core.k8s_info:
+        api_version: apiextensions.k8s.io/v1
+        kind: CustomResourceDefinition
+        name: verticalpodautoscalers.autoscaling.k8s.io
+      register: vpa_crd
+      until: vpa_crd.resources | default([]) | length > 0
+      retries: 36
+      delay: 10
+
+    - name: Apply recommendation-only controller on workers
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ deploy_dir }}/controller.yaml"
+
+    - name: List MAS deployments
+      kubernetes.core.k8s_info:
+        api_version: apps/v1
+        kind: Deployment
+        label_selectors:
+          - mas.ibm.com/instanceId
+      register: mas_deploys
+
+    - name: List Suites
+      kubernetes.core.k8s_info:
+        api_version: core.mas.ibm.com/v1
+        kind: Suite
+      register: suites
+      failed_when: false
+
+    - name: Build VPA targets from labels and Suite CRs
+      ansible.builtin.set_fact:
+        vpa_targets: "{{ lookup('template', 'vpa-targets.yaml.j2') | from_yaml }}"
+
+    - name: Fail if nothing looks like MAS
+      ansible.builtin.fail:
+        msg: >-
+          No MAS Deployments with label mas.ibm.com/instanceId.
+          Install the Suite / ManageWorkspace first.
+      when: vpa_targets | length == 0
+
+    - name: Apply Off-mode VPA per workload
+      kubernetes.core.k8s:
+        state: present
+        definition: "{{ lookup('template', 'vpa-off.yaml.j2') }}"
+      loop: "{{ vpa_targets }}"
+      loop_control:
+        loop_var: target
+        label: "{{ target.namespace }}/{{ target.vpa_name }} -> {{ target.deploy }}"
+
     - name: List Off-mode VPAs
       kubernetes.core.k8s_info:
         api_version: autoscaling.k8s.io/v1
@@ -22,11 +88,9 @@
           - "{{ vpa_selector }}"
       register: vpas
 
-    - name: Fail if nothing is deployed
+    - name: Fail if no Off VPAs
       ansible.builtin.fail:
-        msg: >-
-          No VPAs with label {{ vpa_selector }}.
-          Create them with: ansible-playbook ensure-vpas.yml
+        msg: No VPAs with label {{ vpa_selector }}.
       when: vpas.resources | length == 0
 
     - name: Get target workloads
