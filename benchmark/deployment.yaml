@@ -1,0 +1,54 @@
+# Optional: apply after the image exists (oc new-app already creates a Deployment).
+# Idle on purpose. Start JMeter with: oc exec deploy/mas-vpa-bench -- /opt/benchmark/run.sh 86400
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mas-vpa-bench
+  labels:
+    app: mas-vpa-bench
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mas-vpa-bench
+  template:
+    metadata:
+      labels:
+        app: mas-vpa-bench
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+        node-role.kubernetes.io/worker: ""
+      containers:
+        - name: jmeter
+          image: image-registry.openshift-image-registry.svc:5000/mas-vpa-bench/mas-vpa-bench:latest
+          imagePullPolicy: IfNotPresent
+          command: ["sleep", "infinity"]
+          envFrom:
+            - secretRef:
+                name: mas-vpa-bench-creds
+          env:
+            - name: MAS_DOMAIN
+              value: mas1.apps.example.com
+            - name: MAS_WORKSPACE
+              value: ws1
+            - name: HEAP
+              value: 1g
+          resources:
+            requests:
+              cpu: 200m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault

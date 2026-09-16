@@ -1,0 +1,26 @@
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: "{{ target.vpa_name }}"
+  namespace: "{{ target.namespace }}"
+  labels:
+    app.kubernetes.io/part-of: mas-vpa-off
+    mas.ibm.com/instanceId: "{{ target.instance }}"
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: "{{ target.deploy }}"
+  updatePolicy:
+    updateMode: "Off"
+  resourcePolicy:
+    containerPolicies:
+{% if target.container %}
+      - containerName: "{{ target.container }}"
+        controlledValues: RequestsOnly
+      - containerName: "*"
+        mode: "Off"
+{% else %}
+      - containerName: "*"
+        controlledValues: RequestsOnly
+{% endif %}

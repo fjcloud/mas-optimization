@@ -1,0 +1,53 @@
+{% set ns = namespace(out=[], manage_groups={}) %}
+{# Manage JVMs: operator label, any instance / workspace. #}
+{% for d in mas_deploys.resources | default([]) %}
+{% set labels = d.metadata.labels | default({}) %}
+{% if labels.get('mas.ibm.com/appType') == 'serverBundle' %}
+{% set t = labels.get('mas.ibm.com/appTypeName') | default('') %}
+{% set key = d.metadata.namespace ~ '/' ~ t %}
+{% set _ = ns.manage_groups.update({key: (ns.manage_groups.get(key, []) + [d])}) %}
+{% endif %}
+{% endfor %}
+{% for key, group in ns.manage_groups.items() %}
+{% for d in group %}
+{% set labels = d.metadata.labels | default({}) %}
+{% set t = labels.get('mas.ibm.com/appTypeName') %}
+{% set ws = labels.get('mas.ibm.com/workspaceId') | default('ws') %}
+{% set vpa_name = ('mas-manage-' ~ t) if (group | length == 1) else ('mas-manage-' ~ ws ~ '-' ~ t) %}
+{% set _ = ns.out.append({
+  'deploy': d.metadata.name,
+  'namespace': d.metadata.namespace,
+  'vpa_name': vpa_name,
+  'container': t,
+  'instance': labels.get('mas.ibm.com/instanceId', '')
+}) %}
+{% endfor %}
+{% endfor %}
+{# Core: one VPA per Suite podTemplate, plus licensing-mediator (SlsCfg-owned). #}
+{% set deploy_by_ns_name = {} %}
+{% for d in mas_deploys.resources | default([]) %}
+{% set _ = deploy_by_ns_name.update({d.metadata.namespace ~ '/' ~ d.metadata.name: d}) %}
+{% endfor %}
+{% for suite in suites.resources | default([]) %}
+{% set instance = suite.metadata.name %}
+{% set sns = suite.metadata.namespace %}
+{% set wanted = [] %}
+{% for tmpl in (suite.spec.podTemplates | default([])) %}
+{% if tmpl.name %}{% set _ = wanted.append(tmpl.name) %}{% endif %}
+{% endfor %}
+{% set _ = wanted.append('licensing-mediator') %}
+{% for short in wanted | unique %}
+{% set dname = instance ~ '-' ~ short %}
+{% set d = deploy_by_ns_name.get(sns ~ '/' ~ dname) %}
+{% if d %}
+{% set _ = ns.out.append({
+  'deploy': dname,
+  'namespace': sns,
+  'vpa_name': 'mas-' ~ short,
+  'container': none,
+  'instance': instance
+}) %}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{{ ns.out | to_json }}
