@@ -15,9 +15,7 @@ ansible-playbook print-recommendations.yml
 ## Optional: descheduler
 
 ```bash
-oc apply -k descheduler
-oc wait --for=condition=Established crd/kubedeschedulers.operator.openshift.io --timeout=180s
-oc apply -k descheduler
+ansible-playbook descheduler.yml
 ```
 
 ## Optional: 24h benchmark

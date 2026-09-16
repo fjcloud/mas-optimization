@@ -1,0 +1,30 @@
+---
+# Install Red Hat Kube Descheduler Operator and the cluster KubeDescheduler CR.
+# ROSA HCP: operator stays on workers. Soak namespace mas-vpa-bench is excluded.
+- name: Deploy kube descheduler
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    descheduler_dir: "{{ playbook_dir }}/descheduler"
+
+  tasks:
+    - name: Apply operator namespace, OperatorGroup, and Subscription
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ descheduler_dir }}/operator.yaml"
+
+    - name: Wait for KubeDescheduler CRD
+      kubernetes.core.k8s_info:
+        api_version: apiextensions.k8s.io/v1
+        kind: CustomResourceDefinition
+        name: kubedeschedulers.operator.openshift.io
+      register: desched_crd
+      until: desched_crd.resources | default([]) | length > 0
+      retries: 36
+      delay: 10
+
+    - name: Apply KubeDescheduler
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ descheduler_dir }}/cluster.yaml"
