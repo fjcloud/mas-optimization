@@ -1,0 +1,27 @@
+# ROSA HCP: pin recommender / admission / updater to workers.
+# recommendationOnly=true keeps VPA from resizing pods even if a VPA is flipped to Auto.
+# minReplicas=2 skips 1-replica workloads if the updater is ever enabled.
+apiVersion: autoscaling.openshift.io/v1
+kind: VerticalPodAutoscalerController
+metadata:
+  name: default
+  namespace: openshift-vertical-pod-autoscaler
+spec:
+  recommendationOnly: true
+  minReplicas: 2
+  podMinCPUMillicores: 25
+  podMinMemoryMb: 250
+  safetyMarginFraction: 0.15
+  deploymentOverrides:
+    admission:
+      nodeSelector:
+        kubernetes.io/os: linux
+        node-role.kubernetes.io/worker: ""
+    recommender:
+      nodeSelector:
+        kubernetes.io/os: linux
+        node-role.kubernetes.io/worker: ""
+    updater:
+      nodeSelector:
+        kubernetes.io/os: linux
+        node-role.kubernetes.io/worker: ""
