@@ -10,7 +10,8 @@ if [[ $# -lt 1 ]]; then
 fi
 DURATION_S="$1"
 
-: "${USER_PASSWORD:?set USER_PASSWORD (oc create secret / oc set env --from=secret)}"
+: "${USERNAME:?set USERNAME and USER_PASSWORD (oc create secret / oc set env --from=secret)}"
+: "${USER_PASSWORD:?set USERNAME and USER_PASSWORD (oc create secret / oc set env --from=secret)}"
 : "${MAS_DOMAIN:?set MAS_DOMAIN, e.g. mas1.apps.rosa.example.com}"
 
 MAS_WORKSPACE="${MAS_WORKSPACE:-ws1}"
@@ -38,6 +39,7 @@ LOG="/tmp/run-${STAMP}.log"
 cat > "$PROPS" <<EOF
 MAS_DOMAIN=${MAS_DOMAIN}
 MAS_WORKSPACE=${MAS_WORKSPACE}
+USERNAME=${USERNAME}
 USER_PASSWORD=${USER_PASSWORD}
 CONNECT_TIMEOUT=60000
 RESPONSE_TIMEOUT=60000

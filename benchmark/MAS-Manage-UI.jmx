@@ -290,7 +290,10 @@ if (path.equals(&quot;/maximo/ui/&quot;)) {
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">def threadNum=ctx.getThreadNum() + 1
 String userSuffix = String.format(&quot;%04d&quot;, threadNum)
-String username=vars.get(&quot;VIEWLOCATION_USER_PREFIX&quot;) + userSuffix
+String username=vars.get(&quot;USERNAME&quot;)
+if (username == null || username.isEmpty()) {
+  username=vars.get(&quot;VIEWLOCATION_USER_PREFIX&quot;) + userSuffix
+}
 
 // Save username
 vars.put(&quot;username&quot;, username)
@@ -2889,7 +2892,10 @@ log.debug(&quot;username: &quot; + username)</stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">def threadNum=ctx.getThreadNum() + 1
 String userSuffix = String.format(&quot;%04d&quot;, threadNum)
-String username=vars.get(&quot;VIEWPURCHASE_USER_PREFIX&quot;) + userSuffix
+String username=vars.get(&quot;USERNAME&quot;)
+if (username == null || username.isEmpty()) {
+  username=vars.get(&quot;VIEWPURCHASE_USER_PREFIX&quot;) + userSuffix
+}
 
 // Save username
 vars.put(&quot;username&quot;, username)
@@ -6485,7 +6491,10 @@ log.debug(&quot;username: &quot; + username)</stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">def threadNum=ctx.getThreadNum() + 1
 String userSuffix = String.format(&quot;%04d&quot;, threadNum)
-String username=vars.get(&quot;VIEWPURCHASE_USER_CHG_PREFIX&quot;) + userSuffix
+String username=vars.get(&quot;USERNAME&quot;)
+if (username == null || username.isEmpty()) {
+  username=vars.get(&quot;VIEWPURCHASE_USER_CHG_PREFIX&quot;) + userSuffix
+}
 
 // Save username
 vars.put(&quot;username&quot;, username)
@@ -9467,7 +9476,10 @@ log.debug(&quot;username: &quot; + username)</stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">def threadNum=ctx.getThreadNum() + 1
 String userSuffix = String.format(&quot;%04d&quot;, threadNum)
-String username=vars.get(&quot;VIEWPURCHASE_USER_RCV_PREFIX&quot;) + userSuffix
+String username=vars.get(&quot;USERNAME&quot;)
+if (username == null || username.isEmpty()) {
+  username=vars.get(&quot;VIEWPURCHASE_USER_RCV_PREFIX&quot;) + userSuffix
+}
 
 // Save username
 vars.put(&quot;username&quot;, username)
@@ -13428,7 +13440,10 @@ log.debug(&quot;username: &quot; + username)</stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">def threadNum=ctx.getThreadNum() + 1
 String userSuffix = String.format(&quot;%04d&quot;, threadNum)
-String username=vars.get(&quot;VIEWPURCHASE_USER_CL_PREFIX&quot;) + userSuffix
+String username=vars.get(&quot;USERNAME&quot;)
+if (username == null || username.isEmpty()) {
+  username=vars.get(&quot;VIEWPURCHASE_USER_CL_PREFIX&quot;) + userSuffix
+}
 
 // Save username
 vars.put(&quot;username&quot;, username)
@@ -16423,7 +16438,10 @@ log.debug(&quot;username: &quot; + username)</stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">def threadNum=ctx.getThreadNum() + 1
 String userSuffix = String.format(&quot;%04d&quot;, threadNum)
-String username=vars.get(&quot;VIEWWORKORDER_USER_PREFIX&quot;) + userSuffix
+String username=vars.get(&quot;USERNAME&quot;)
+if (username == null || username.isEmpty()) {
+  username=vars.get(&quot;VIEWWORKORDER_USER_PREFIX&quot;) + userSuffix
+}
 
 // Save username
 vars.put(&quot;username&quot;, username)
@@ -22490,7 +22508,10 @@ log.debug(&quot;username: &quot; + username)</stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">def threadNum=ctx.getThreadNum() + 1
 String userSuffix = String.format(&quot;%04d&quot;, threadNum)
-String username=vars.get(&quot;VIEWWORKORDER_USER_VA_PREFIX&quot;) + userSuffix
+String username=vars.get(&quot;USERNAME&quot;)
+if (username == null || username.isEmpty()) {
+  username=vars.get(&quot;VIEWWORKORDER_USER_VA_PREFIX&quot;) + userSuffix
+}
 
 // Save username
 vars.put(&quot;username&quot;, username)
@@ -27788,7 +27809,10 @@ log.debug(&quot;username: &quot; + username)</stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">def threadNum=ctx.getThreadNum() + 1
 String userSuffix = String.format(&quot;%04d&quot;, threadNum)
-String username=vars.get(&quot;VIEWWORKORDER_USER_INP_PREFIX&quot;) + userSuffix
+String username=vars.get(&quot;USERNAME&quot;)
+if (username == null || username.isEmpty()) {
+  username=vars.get(&quot;VIEWWORKORDER_USER_INP_PREFIX&quot;) + userSuffix
+}
 
 // Save username
 vars.put(&quot;username&quot;, username)
@@ -34350,7 +34374,10 @@ log.debug(&quot;username: &quot; + username)</stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">def threadNum=ctx.getThreadNum() + 1
 String userSuffix = String.format(&quot;%04d&quot;, threadNum)
-String username=vars.get(&quot;VIEWWORKORDER_USER_COMP_PREFIX&quot;) + userSuffix
+String username=vars.get(&quot;USERNAME&quot;)
+if (username == null || username.isEmpty()) {
+  username=vars.get(&quot;VIEWWORKORDER_USER_COMP_PREFIX&quot;) + userSuffix
+}
 
 // Save username
 vars.put(&quot;username&quot;, username)
@@ -41141,7 +41168,10 @@ log.debug(&quot;username: &quot; + username)</stringProp>
           <stringProp name="cacheKey">true</stringProp>
           <stringProp name="script">def threadNum=ctx.getThreadNum() + 1
 String userSuffix = String.format(&quot;%04d&quot;, threadNum)
-String username=vars.get(&quot;VIEWWORKORDER_USER_CL_PREFIX&quot;) + userSuffix
+String username=vars.get(&quot;USERNAME&quot;)
+if (username == null || username.isEmpty()) {
+  username=vars.get(&quot;VIEWWORKORDER_USER_CL_PREFIX&quot;) + userSuffix
+}
 
 // Save username
 vars.put(&quot;username&quot;, username)
