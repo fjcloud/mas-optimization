@@ -1,7 +1,8 @@
-# MAS VPA on ROSA HCP
+# MAS optimization on ROSA HCP
 
-Install the Red Hat Vertical Pod Autoscaler and print Maximo **recommendations**.
-VPA does not resize pods. You apply the CR patches yourself.
+Install Red Hat VPA, print Maximo **recommendations**, and optionally rebalance
+pods with the descheduler. VPA does not resize pods. You apply the CR patches
+yourself.
 
 Requirements: Python, pip, and an `oc` session already logged in to the
 OpenShift cluster.
@@ -14,17 +15,18 @@ ansible-playbook print-recommendations.yml
 
 ## Optional: descheduler
 
+Evicts pods from packed workers onto emptier ones; `mas-vpa-bench` is never touched.
+
 ```bash
 ansible-playbook descheduler.yml
 ```
 
 ## Optional: 24h benchmark
 
+IBM JMeter soak against Manage; one user in the secret, reused by every thread (Start Center, Locations, POs, Work Orders including status changes).
+
 ```bash
 oc new-project mas-vpa-bench
-
-# One Manage user with Start Center, Locations, Purchase Orders, and Work Orders
-# (including status changes). Same account is reused by every JMeter thread.
 oc create secret generic mas-vpa-bench-creds \
   --from-literal=USERNAME='bench' \
   --from-literal=USER_PASSWORD='ChangeMe'
