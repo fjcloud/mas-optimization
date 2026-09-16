@@ -15,7 +15,7 @@ ansible-playbook print-recommendations.yml
 
 ## Optional: descheduler
 
-Evicts pods from packed workers onto emptier ones; `mas-vpa-bench` is never touched.
+Evicts pods from packed workers onto emptier ones; `mas-bench` is never touched.
 
 ```bash
 ansible-playbook descheduler.yml
@@ -26,17 +26,17 @@ ansible-playbook descheduler.yml
 IBM JMeter soak against Manage; one user in the secret, reused by every thread (Start Center, Locations, POs, Work Orders including status changes).
 
 ```bash
-oc new-project mas-vpa-bench
-oc create secret generic mas-vpa-bench-creds \
+oc new-project mas-bench
+oc create secret generic mas-bench-creds \
   --from-literal=USERNAME='bench' \
   --from-literal=USER_PASSWORD='ChangeMe'
 
-oc new-app ./benchmark --name=mas-vpa-bench --strategy=docker \
+oc new-app ./benchmark --name=mas-bench --strategy=docker \
   -e MAS_DOMAIN=mas1.apps.rosa.fja-hcp.bq37.p3.openshiftapps.com \
   -e MAS_WORKSPACE=ws1
 
-oc set env deploy/mas-vpa-bench --from=secret/mas-vpa-bench-creds
+oc set env deploy/mas-bench --from=secret/mas-bench-creds
 
-oc exec deploy/mas-vpa-bench -- \
+oc exec deploy/mas-bench -- \
   /bin/sh -c 'nohup /opt/benchmark/run.sh 86400 >/tmp/bench.out 2>&1 &'
 ```

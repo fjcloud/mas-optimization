@@ -1,5 +1,5 @@
 # Idle IBM MAS-Manage-UI JMeter runner (UBI + OpenJDK).
-# Main process sleeps; start a run with: oc exec deploy/mas-vpa-bench -- /opt/benchmark/run.sh 86400
+# Main process sleeps; start a run with: oc exec deploy/mas-bench -- /opt/benchmark/run.sh 86400
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
 
 ENV JMETER_VERSION=5.6.3 \

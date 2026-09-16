@@ -1,6 +1,6 @@
 ---
 # Install Red Hat Kube Descheduler Operator and the cluster KubeDescheduler CR.
-# ROSA HCP: operator stays on workers. Soak namespace mas-vpa-bench is excluded.
+# ROSA HCP: operator stays on workers. Soak namespace mas-bench is excluded.
 - name: Deploy kube descheduler
   hosts: localhost
   connection: local

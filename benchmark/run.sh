@@ -1,6 +1,6 @@
 #!/bin/bash
 # IBM MAS-Manage-UI JMeter soak. Intended to run inside the idle bench pod:
-#   oc exec deploy/mas-vpa-bench -- /opt/benchmark/run.sh 86400
+#   oc exec deploy/mas-bench -- /opt/benchmark/run.sh 86400
 set -euo pipefail
 
 if [[ $# -lt 1 ]]; then

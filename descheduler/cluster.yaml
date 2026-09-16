@@ -1,6 +1,6 @@
 # LongLifecycle = LowNodeUtilization without the 24h pod lifetime recycle.
 # High = 40% under / 70% over (Medium never treats a ~30% extra node as empty).
-# mas-vpa-bench stays excluded so the soak pod is never evicted.
+# mas-bench stays excluded so the soak pod is never evicted.
 # Set spec.mode to Predictive to dry-run instead of evicting.
 apiVersion: operator.openshift.io/v1
 kind: KubeDescheduler
@@ -19,7 +19,7 @@ spec:
     devLowNodeUtilizationThresholds: High
     namespaces:
       excluded:
-        - mas-vpa-bench
+        - mas-bench
         - cert-manager
         - cert-manager-operator
   evictionLimits:
